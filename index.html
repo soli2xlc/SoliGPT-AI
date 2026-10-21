@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="de" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SoliGPT — All-in-One AI Assistant</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#141416',
+                        cardbg: '#1e1e22',
+                        cardborder: '#2e2e34',
+                        accentpink: '#e26d8c',
+                        accentcyan: '#52b7b5',
+                        accentyellow: '#d1a756',
+                    },
+                    fontFamily: {
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom UI styling matching reference screenshot */
+        body {
+            background-color: #141416;
+            color: #e1e1e6;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            user-select: none;
+            overflow-x: hidden;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            letter-spacing: 0.08em;
+            color: #8e8e93;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            font-size: 2.25rem;
+            font-weight: 800;
+            line-height: 1.1;
+            color: #ffffff;
+        }
+
+        .custom-card {
+            background-color: #1a1a1e;
+            border: 1px solid #2d2d35;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .custom-card:hover {
+            border-color: #444452;
+        }
+
+        /* Chart bar styling */
+        .bar-pink {
+            background-color: #e26d8c;
+        }
+        .bar-cyan {
+            background-color: #52b7b5;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #141416;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2d2d35;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #e26d8c;
+        }
+
+        .btn-style {
+            background-color: #24242a;
+            border: 1px solid #363640;
+            color: #d1d1d6;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.15s ease;
+        }
+        .btn-style:hover {
+            background-color: #2e2e36;
+            color: #ffffff;
+            border-color: #50505e;
+        }
+        .btn-style:active {
+            transform: scale(0.98);
+        }
+
+        .input-style {
+            background-color: #1a1a1e;
+            border: 1px solid #2d2d35;
+            color: #ffffff;
+            padding: 8px 12px;
+            border-radius: 8px;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+        .input-style:focus {
+            border-color: #e26d8c;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-4 md:p-6 text-slate-200">
+
+    <!-- TOP STATS BAR (SoliGPT System Status) -->
+    <header class="w-full max-w-7xl mx-auto flex items-center justify-between border-b border-zinc-800/60 pb-4 mb-4">
+        <!-- Left Stat -->
+        <div class="text-left">
+            <div class="stat-label">SOLIGPT MODEL</div>
+            <div class="text-xl md:text-2xl font-extrabold text-white" id="stat-model">v3.1 Flash</div>
+            <div class="text-xs text-zinc-500 font-mono mt-0.5">
+                STATUS: <span class="text-emerald-400 font-semibold"><i class="fa-solid fa-circle text-[8px] mr-1"></i>ONLINE</span>
+            </div>
+        </div>
+
+        <!-- Center Branding -->
+        <div class="text-center">
+            <div class="stat-label">ALL-IN-ONE KI ASSISTENT</div>
+            <div class="text-3xl md:text-4xl font-extrabold tracking-tight text-white">Soli<span class="text-accentpink">GPT</span></div>
+        </div>
+
+        <!-- Right Stat & Settings Button -->
+        <div class="text-right flex items-center gap-4">
+            <div>
+                <div class="stat-label">MODUS</div>
+                <div class="stat-value text-accentcyan text-xl md:text-2xl" id="current-mode-label">CHAT</div>
+                <div class="text-xs text-zinc-500 font-mono mt-0.5">
+                    LATENZ: <span class="text-zinc-300">&lt; 150ms</span>
+                </div>
+            </div>
+            <button onclick="toggleSettingsModal()" class="btn-style !p-3 hover:text-accentpink" title="API-Key Einstellungen">
+                <i class="fa-solid fa-key text-lg"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settings-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-[#1a1a1e] border border-[#2d2d35] rounded-xl p-6 w-full max-w-md shadow-2xl space-y-4">
+            <div class="flex justify-between items-center border-b border-zinc-800 pb-3">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-key text-accentpink"></i> API Key Einstellungen
+                </h3>
+                <button onclick="toggleSettingsModal()" class="text-zinc-500 hover:text-white">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            
+            <p class="text-xs text-zinc-400">
+                Gib hier deinen eigenen Gemini API-Key ein. Wenn das Feld leer gelassen wird, verwendet das System den Standardwert.
+            </p>
+
+            <div class="space-y-1">
+                <label for="custom-api-key" class="stat-label">Google Gemini API Key</label>
+                <div class="relative">
+                    <input type="password" id="custom-api-key" placeholder="AIzaSy..." class="w-full input-style font-mono text-xs pr-10">
+                    <button type="button" onclick="toggleKeyVisibility()" class="absolute right-3 top-2.5 text-zinc-500 hover:text-zinc-300">
+                        <i id="key-toggle-icon" class="fa-solid fa-eye text-xs"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2 border-t border-zinc-800">
+                <button onclick="toggleSettingsModal()" class="btn-style">Abbrechen</button>
+                <button onclick="saveApiKey()" class="btn-style text-white !bg-accentpink border-none">Speichern</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN CENTRAL CONTENT AREA -->
+    <main class="w-full max-w-7xl mx-auto flex-1 flex flex-col justify-between gap-4">
+
+        <!-- Mode Navigation Bar -->
+        <div class="flex flex-wrap justify-center items-center gap-2 py-1">
+            <button onclick="switchMode('chat')" id="tab-chat" class="btn-style text-accentpink border-accentpink/40 bg-zinc-800/80">
+                <i class="fa-solid fa-comments mr-1.5"></i> Chat AI
+            </button>
+            <button onclick="switchMode('image')" id="tab-image" class="btn-style">
+                <i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i> Bild-Generator
+            </button>
+            <button onclick="switchMode('tts')" id="tab-tts" class="btn-style">
+                <i class="fa-solid fa-volume-high mr-1.5"></i> Voice & TTS
+            </button>
+            <button onclick="switchMode('code')" id="tab-code" class="btn-style">
+                <i class="fa-solid fa-code mr-1.5"></i> Code-Terminal
+            </button>
+        </div>
+
+        <!-- Dynamic Main Card Container -->
+        <div class="flex-1 flex flex-col justify-center items-center my-2">
+            
+            <!-- SUB-VIEW 1: CHAT MODE -->
+            <div id="view-chat" class="w-full max-w-4xl h-[500px] flex flex-col justify-between bg-[#1a1a1e] border border-[#2d2d35] rounded-xl p-4 shadow-2xl">
+                <!-- Chat History Window -->
+                <div id="chat-messages" class="flex-1 overflow-y-auto space-y-3 pr-2 font-mono text-sm">
+                    <div class="flex items-start gap-2 text-zinc-400">
+                        <span class="text-accentpink font-bold">[SoliGPT]:</span>
+                        <span>Hallo! Ich bin SoliGPT, deine universelle KI. Frag mich irgendetwas, generiere Code, erstelle Bilder oder nutze meine Werkzeuge!</span>
+                    </div>
+                </div>
+
+                <!-- Chat Input Form -->
+                <form id="chat-form" onsubmit="handleChatSubmit(event)" class="mt-3 flex gap-2 pt-2 border-t border-zinc-800">
+                    <input type="text" id="chat-input" placeholder="Nachricht an SoliGPT eingeben..." class="flex-1 input-style font-mono text-sm" autocomplete="off">
+                    <button type="submit" class="btn-style text-white !bg-accentpink/80 hover:!bg-accentpink border-none px-5">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                </form>
+            </div>
+
+            <!-- SUB-VIEW 2: BILD GENERATOR (Gemini 3.1 Flash Image) -->
+            <div id="view-image" class="hidden w-full max-w-4xl min-h-[500px] flex flex-col justify-between bg-[#1a1a1e] border border-[#2d2d35] rounded-xl p-4">
+                <div class="text-center mb-2">
+                    <h2 class="text-sm font-bold tracking-wider text-zinc-400 uppercase">SoliGPT Visual Art Studio</h2>
+                    <p class="text-xs text-zinc-500">Integrierte Bildgenerierung via KI</p>
+                </div>
+
+                <!-- Canvas Preview Box -->
+                <div class="flex-1 min-h-[340px] bg-black/40 rounded-lg border border-zinc-800 flex items-center justify-center relative overflow-hidden p-2">
+                    <div id="image-placeholder" class="text-center text-zinc-600">
+                        <i class="fa-regular fa-image text-5xl mb-3"></i>
+                        <p class="text-xs font-mono">Kein Bild generiert. Gib einen Prompt unten ein.</p>
+                    </div>
+                    <img id="generated-image" class="hidden max-h-[360px] object-contain rounded-md shadow-lg" alt="Generated Output">
+                    <div id="image-spinner" class="hidden absolute inset-0 bg-black/70 flex flex-col items-center justify-center text-accentpink">
+                        <i class="fa-solid fa-circle-notch fa-spin text-3xl mb-2"></i>
+                        <span class="font-mono text-xs">Generiere KI-Kunstwerk...</span>
+                    </div>
+                </div>
+
+                <!-- Image Controls -->
+                <div class="mt-3 flex gap-2">
+                    <input type="text" id="image-prompt" placeholder="z.B. Ein futuristischer Cyberpunk-Roboter in Neon-Farben..." class="flex-1 input-style text-sm">
+                    <button onclick="generateImage()" class="btn-style text-white !bg-accentcyan/80 hover:!bg-accentcyan border-none px-4">
+                        Erstellen
+                    </button>
+                </div>
+            </div>
+
+            <!-- SUB-VIEW 3: VOICE & TTS (Gemini 2.5 Flash TTS) -->
+            <div id="view-tts" class="hidden w-full max-w-4xl min-h-[500px] flex flex-col justify-between bg-[#1a1a1e] border border-[#2d2d35] rounded-xl p-4">
+                <div class="text-center mb-2">
+                    <h2 class="text-sm font-bold tracking-wider text-zinc-400 uppercase">Text-to-Speech & Synthesizer</h2>
+                    <p class="text-xs text-zinc-500">Wandle Text in natürliche Sprache mit individuellen Stimmen um</p>
+                </div>
+
+                <div class="space-y-4 my-auto">
+                    <textarea id="tts-input" rows="6" class="w-full input-style font-mono text-sm" placeholder="Gib hier den Text ein, den SoliGPT vorlesen soll..."></textarea>
+                    
+                    <div class="flex flex-wrap items-center justify-between gap-2 bg-zinc-900/60 p-3 rounded-lg border border-zinc-800">
+                        <div class="flex items-center gap-3">
+                            <label class="text-xs text-zinc-400 font-mono">STIMME:</label>
+                            <select id="tts-voice" class="input-style text-xs py-1">
+                                <option value="Zephyr">Zephyr (Hell / Dynamisch)</option>
+                                <option value="Puck">Puck (Lebhaft)</option>
+                                <option value="Kore">Kore (Bestimmt / Klar)</option>
+                                <option value="Fenrir">Fenrir (Kraftvoll)</option>
+                            </select>
+                        </div>
+                        <button onclick="generateSpeech()" id="tts-btn" class="btn-style text-white !bg-accentpink border-none px-6">
+                            <i class="fa-solid fa-play mr-2"></i> Vorlesen
+                        </button>
+                    </div>
+                </div>
+                <div id="tts-status" class="text-center text-xs font-mono text-zinc-500 mt-2">Bereit.</div>
+            </div>
+
+            <!-- SUB-VIEW 4: CODE TERMINAL -->
+            <div id="view-code" class="hidden w-full max-w-4xl h-[500px] flex flex-col bg-[#111113] border border-[#2d2d35] rounded-xl p-4 font-mono text-xs">
+                <div class="flex items-center justify-between pb-2 border-b border-zinc-800 text-zinc-500 mb-2">
+                    <span>SoliGPT Terminal v2.0</span>
+                    <span class="text-emerald-400"><i class="fa-solid fa-circle text-[8px] mr-1"></i> ONLINE</span>
+                </div>
+                <div id="terminal-output" class="flex-1 overflow-y-auto space-y-2 text-zinc-300 min-h-[320px]">
+                    <div class="text-zinc-500">$ soligpt --version</div>
+                    <div>SoliGPT AI Core v3.1.0-Release</div>
+                    <div class="text-zinc-500">$ help</div>
+                    <div>Verfügbare Befehle: 'python', 'javascript', 'analyze', 'clear'</div>
+                </div>
+                <div class="mt-2 flex items-center gap-2 border-t border-zinc-800 pt-2">
+                    <span class="text-accentpink">$</span>
+                    <input type="text" id="terminal-input" onkeydown="handleTerminalKey(event)" class="flex-1 bg-transparent outline-none text-white font-mono" placeholder="Befehl oder Code-Frage eingeben...">
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- SLEEK BOTTOM CONTROL BAR -->
+    <footer class="w-full max-w-7xl mx-auto mt-4 pt-3 border-t border-zinc-800/60 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+        <div class="flex flex-wrap items-center gap-4">
+            <span class="text-zinc-500">SoliGPT AI Dashboard &copy; 2026</span>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <button onclick="clearHistory()" class="btn-style">
+                Verlauf löschen
+            </button>
+        </div>
+    </footer>
+
+    <!-- JAVASCRIPT ENGINE -->
+    <script>
+        /* --- STATE MANAGEMENT --- */
+        let currentMode = 'chat';
+        let userApiKey = '';
+
+        function getActiveApiKey() {
+            return userApiKey.trim() !== '' ? userApiKey.trim() : '';
+        }
+
+        /* --- SETTINGS MODAL CONTROLLER --- */
+        function toggleSettingsModal() {
+            const modal = document.getElementById('settings-modal');
+            modal.classList.toggle('hidden');
+        }
+
+        function toggleKeyVisibility() {
+            const input = document.getElementById('custom-api-key');
+            const icon = document.getElementById('key-toggle-icon');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fa-solid fa-eye-slash text-xs';
+            } else {
+                input.type = 'password';
+                icon.className = 'fa-solid fa-eye text-xs';
+            }
+        }
+
+        function saveApiKey() {
+            userApiKey = document.getElementById('custom-api-key').value;
+            toggleSettingsModal();
+        }
+
+        /* --- UI TAB SWITCHING --- */
+        function switchMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('[id^="view-"]').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`view-${mode}`).classList.remove('hidden');
+
+            document.querySelectorAll('[id^="tab-"]').forEach(el => {
+                el.className = 'btn-style';
+            });
+            const activeTab = document.getElementById(`tab-${mode}`);
+            if (activeTab) {
+                activeTab.className = 'btn-style text-accentpink border-accentpink/40 bg-zinc-800/80';
+            }
+
+            document.getElementById('current-mode-label').innerText = mode.toUpperCase();
+        }
+
+        /* --- GEMINI API INTEGRATION (SoliGPT AI Core) --- */
+        async function callGeminiAPI(prompt, systemInstruction = "Du bist SoliGPT, ein hochmoderner KI-Assistent. Antworte auf Deutsch präzise und hilfsbereit.") {
+            const apiKey = getActiveApiKey(); 
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                systemInstruction: { parts: [{ text: systemInstruction }] }
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data =. await response.json();
+                return data.candidates?.[0]?.content?.parts?.[0]?.text || "Fehler: Keine Antwort erhalten.";
+            } catch (err) {
+                console.error(err);
+                return "SoliGPT Offline-Antwort: Ich konnte keine Verbindung zum KI-Server herstellen.";
+            }
+        }
+
+        /* --- CHAT CONTROLLER --- */
+        async function handleChatSubmit(e) {
+            e.preventDefault();
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            if (!message) return;
+
+            const chatMessages = document.getElementById('chat-messages');
+
+            const userMsg = document.createElement('div');
+            userMsg.className = 'flex items-start gap-2 text-white';
+            userMsg.innerHTML = `<span class="text-accentcyan font-bold">[Du]:</span> <span>${escapeHtml(message)}</span>`;
+            chatMessages.appendChild(userMsg);
+
+            input.value = '';
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            const aiMsg = document.createElement('div');
+            aiMsg.className = 'flex items-start gap-2 text-zinc-300';
+            aiMsg.innerHTML = `<span class="text-accentpink font-bold">[SoliGPT]:</span> <span class="animate-pulse">Denke nach...</span>`;
+            chatMessages.appendChild(aiMsg);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            const reply = await callGeminiAPI(message);
+            aiMsg.querySelector('span:nth-child(2)').className = '';
+            aiMsg.querySelector('span:nth-child(2)').innerText = reply;
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        /* --- IMAGE GENERATION (Gemini 3.1 Flash Image) --- */
+        async function generateImage() {
+            const promptInput = document.getElementById('image-prompt');
+            const prompt = promptInput.value.trim();
+            if (!prompt) return;
+
+            const spinner = document.getElementById('image-spinner');
+            const placeholder = document.getElementById('image-placeholder');
+            const imgEl = document.getElementById('generated-image');
+
+            spinner.classList.remove('hidden');
+
+            const apiKey = getActiveApiKey();
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image:generateContent?key=${apiKey}`;
+
+            const payload = {
+                contents: [{
+                    parts: [{ text: prompt }]
+                }],
+                generationConfig: {
+                    responseModalities: ['IMAGE'],
+                    imageConfig: {
+                        aspectRatio: "1:1"
+                    }
+                }
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP Fehler: ${response.status}`);
+                }
+
+                const result = await response.json();
+                const part = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+                
+                if (part && part.inlineData && part.inlineData.data) {
+                    const mimeType = part.inlineData.mimeType || 'image/png';
+                    imgEl.src = `data:${mimeType};base64,${part.inlineData.data}`;
+                    imgEl.classList.remove('hidden');
+                    placeholder.classList.add('hidden');
+                } else {
+                    alert("Kein Bild in der Antwort empfangen. Bitte versuche einen anderen Prompt.");
+                }
+            } catch (err) {
+                console.error("Bildgenerierungs-Fehler:", err);
+                alert("Fehler bei der Bildgenerierung: " + err.message);
+            } finally {
+                spinner.classList.add('hidden');
+            }
+        }
+
+        /* --- TTS CONTROLLER (Gemini 2.5 Flash TTS) --- */
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        async function generateSpeech() {
+            const text = document.getElementById('tts-input').value.trim();
+            const voice = document.getElementById('tts-voice').value;
+            const status = document.getElementById('tts-status');
+            const btn = document.getElementById('tts-btn');
+
+            if (!text) return;
+
+            btn.disabled = true;
+            status.innerText = "Synthetisiere Audio...";
+
+            const apiKey = getActiveApiKey();
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+
+            const payload = {
+                contents: [{ parts: [{ text: text }] }],
+                generationConfig: {
+                    responseModalities: ["AUDIO"],
+                    speechConfig: {
+                        voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } }
+                    }
+                }
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                const part = result?.candidates?.[0]?.content?.parts?.[0];
+                const audioData = part?.inlineData?.data;
+
+                if (audioData) {
+                    status.innerText = "Spiele Audio ab...";
+                    playPCM(audioData);
+                } else {
+                    status.innerText = "Fehler: Keine Audiodaten empfangen.";
+                }
+            } catch (err) {
+                console.error("TTS Error:", err);
+                status.innerText = "Fehler bei der Sprachgenerierung.";
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function playPCM(base64Data) {
+            try {
+                const cleanBase64 = base64Data.replace(/[\r\n\s]/g, '');
+                const binary = atob(cleanBase64);
+                const len = binary.length;
+                const bytes = new Uint8Array(len);
+                for (let i = 0; i < len; i++) {
+                    bytes[i] = binary.charCodeAt(i);
+                }
+                
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+
+                const pcm16 = new Int16Array(bytes.buffer);
+                const sampleRate = 24000;
+                const audioBuffer = audioCtx.createBuffer(1, pcm16.length, sampleRate);
+                const channelData = audioBuffer.getChannelData(0);
+
+                for (let i = 0; i < pcm16.length; i++) {
+                    channelData[i] = pcm16[i] / 32768.0;
+                }
+
+                const source = audioCtx.createBufferSource();
+                source.buffer = audioBuffer;
+                source.connect(audioCtx.destination);
+                source.start();
+                
+                source.onended = () => {
+                    document.getElementById('tts-status').innerText = "Bereit.";
+                };
+            } catch(e) {
+                console.error("PCM Processing Error:", e);
+                document.getElementById('tts-status').innerText = "Audio-Dekodierungsfehler.";
+            }
+        }
+
+        /* --- TERMINAL CONTROLLER --- */
+        async function handleTerminalKey(e) {
+            if (e.key === 'Enter') {
+                const input = document.getElementById('terminal-input');
+                const cmd = input.value.trim();
+                if (!cmd) return;
+
+                const out = document.getElementById('terminal-output');
+                out.innerHTML += `<div class="text-zinc-500">$ ${escapeHtml(cmd)}</div>`;
+                input.value = '';
+
+                if (cmd.toLowerCase() === 'clear') {
+                    out.innerHTML = '';
+                    return;
+                }
+
+                const response = await callGeminiAPI(cmd, "Du bist ein Terminal-Code-Assistent. Gib kurze, komprimierte Code-Antworten.");
+                out.innerHTML += `<div class="text-emerald-400">${escapeHtml(response)}</div>`;
+                out.scrollTop = out.scrollHeight;
+            }
+        }
+
+        /* --- UTILS --- */
+        function clearHistory() {
+            document.getElementById('chat-messages').innerHTML = '<div class="text-zinc-500">[Verlauf gelöscht]</div>';
+            document.getElementById('terminal-output').innerHTML = '<div class="text-zinc-500">[Terminal geleert]</div>';
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        }
+    </script>
+</body>
+</html>
